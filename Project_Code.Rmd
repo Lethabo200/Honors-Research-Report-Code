@@ -1,0 +1,904 @@
+---
+title: "Appendix consisting of code used"
+output: pdf_document
+geometry: "left=0.5cm,right=0.5cm,top=1cm,bottom=1cm"
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(DirichletReg)
+library(latex2exp)
+library(ggplot2)
+library("NMOF")
+library("ggplot2")
+library(latex2exp)
+library(tidyquant)
+library(tseries)
+library(fPortfolio)
+library(nloptr)
+library(tidyverse)
+library(gridExtra)
+library(formatR)
+```
+
+## Code for the 3D Dirichlet distribution plot in Chapter 2
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE,results='hide',tidy=TRUE,tidy.opts=list(width.cutoff=80)}
+a1<-3
+a2<-3
+a3<-3
+a<-cbind(a1,a2,a3)
+
+n<-100
+
+w1<-rgamma(n,a1,1)
+w2<-rgamma(n,a2,1)
+w3<-rgamma(n,a3,1)
+
+
+y<-t(cbind(w1,w2,w3)/(apply(cbind(w1,w2,w3), 1, sum)))
+#apply(y, 2,sum)
+
+c1<-y[1,]
+c2<-y[2,]
+c3<-y[3,]
+
+x<-cbind(c1,c2,c3)
+
+x1 <- seq(0,1,by = 0.01)
+x2 <- seq(0,1,by=0.01)
+
+
+h <- matrix(0,length(x1),length(x2))
+
+l=length(x1)
+w=length(x2)
+
+for (i in 1:l) {
+  for (j in 1:w) {
+    
+    if(x1[i]+x2[j]<1){
+      h[i,j]=(gamma(sum(a))/gamma(a[1])*gamma(a[2])*gamma(a[3]))*(x1[i]^(a[1]-1))*(x2[j]^(a[2]-1))*((1-x1[i]-x2[j])^(a[3]-1))                                                   
+    }
+  }
+}
+
+plot.MSGLN <- function(upzlim=0.2, lowzlim=-0.3, theta=300, p=8, 
+                       rr,sh,vc=-0.0025,col="white",borcol,ltheta=100){
+  Z=matrix(0, length(x1), length(x2))
+  
+  for(i in 1:length(x1)){
+    for(j in 1:length(x2)){
+      
+      if(x1[i]+x2[j]<1){
+        Z[i,j]=(gamma(sum(a))/(gamma(a[1])*gamma(a[2])*gamma(a[3])))*
+          (x1[i]^(a[1]-1))*(x2[j]^(a[2]-1))*((1-x1[i]-x2[j])^(a[3]-1))                                                   
+      }
+    }
+    
+  } 
+  
+  trans <- persp(x1,x2,Z, zlim=c(lowzlim, upzlim), 
+                 box=T, theta=theta, r=rr, shade=sh,
+                 lwd=0.5, axes=T, expand=0.6,
+                 ltheta = ltheta,
+                 phi= p, border=borcol,main="",xlab = "x1", ylab = "x2", zlab="f(x)")
+  clines <- contourLines(x1, x2, Z, nlevels = 15)
+  lapply(clines, function(contour){ lines(trans3d(contour$x1,contour$x2,vc,pmat=trans)) })
+  
+}
+
+
+
+par(mfrow=c(1,2))
+plot.MSGLN(theta = 300, p=10, upzlim =20, lowzlim = -0.08,
+           rr = 5 , sh = 0.001, vc=-0.10, borcol=
+             'lightgoldenrod', ltheta=100)
+mtext(expression(paste( ' (', alpha[1], ',', alpha[2], ',', alpha[3], ') = (3,3,3)')))
+
+a1<-3
+a2<-6
+a3<-9
+a<-cbind(a1,a2,a3)
+
+plot.MSGLN(theta = 290, p=10, upzlim =20, lowzlim = -0.08,
+           rr = 5 , sh = 0.001, vc=-0.10, borcol=
+             'lightgoldenrod', ltheta=100)
+mtext(expression(paste( ' (', alpha[1], ',', alpha[2], ',', alpha[3], ') = (3,6,9)')))
+
+```
+
+## Code for chapter 2 simulation study
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE,results='hide'}
+y_1 <- rdirichlet(n=1000,alpha=c(1,1,1))
+obj1 <- DR_data(y_1)
+colnames(obj1) <- c('x1','x2','x3')
+
+y_2 <- rdirichlet(n=1000,alpha=c(3,3,3))
+obj2 <- DR_data(y_2)
+colnames(obj2) <- c('x1','x2','x3')
+
+y_3 <- rdirichlet(n=1000,alpha=c(8,8,8))
+obj3 <- DR_data(y_3)
+colnames(obj3) <- c('x1','x2','x3')
+
+y_4 <- rdirichlet(n=1000,alpha=c(0.1,0.1,0.1))
+obj4 <- DR_data(y_4)
+colnames(obj4) <- c('x1','x2','x3')
+
+y_5 <- rdirichlet(n=1000,alpha=c(0.3,0.3,0.3))
+obj5 <- DR_data(y_5)
+colnames(obj5) <- c('x1','x2','x3')
+
+y_6 <- rdirichlet(n=1000,alpha=c(0.8,0.8,0.8))
+obj6 <- DR_data(y_6)
+colnames(obj6) <- c('x1','x2','x3')
+
+
+oldpar <- par(oma=c(0,0,2,0), mar=c(3,3,3,1), mfrow=c(2,3))
+plot(obj1,main=TeX(r'($\alpha=\left[1,1,1  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj2,main=TeX(r'($\alpha=\left[3,3,3  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj3,main=TeX(r'($\alpha=\left[10,10,10  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+
+plot(obj4,main=TeX(r'($\alpha=\left[0.1,0.1,0.1  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj5,main=TeX(r'($\alpha=\left[0.2,0.2,0.2  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj6,main=TeX(r'($\alpha=\left[0.6,0.6,0.6  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+
+mtext(TeX(r'(3D Symmetric Dirichlet simulations on the 2D simplex for various $\alpha$ values)'), outer=TRUE, cex=1.1)
+par(oldpar)
+
+
+y_7 <- rdirichlet(n=1000,alpha=c(1,2,3))
+obj7 <- DR_data(y_7)
+colnames(obj7) <- c('x1','x2','x3')
+
+y_8 <- rdirichlet(n=1000,alpha=c(3,6,9))
+obj8 <- DR_data(y_8)
+colnames(obj8) <- c('x1','x2','x3')
+
+y_9 <- rdirichlet(n=1000,alpha=c(8,16,24))
+obj9 <- DR_data(y_9)
+colnames(obj9) <- c('x1','x2','x3')
+
+y_10 <- rdirichlet(n=1000,alpha=c(0.1,0.2,0.3))
+obj10 <- DR_data(y_10)
+colnames(obj10) <- c('x1','x2','x3')
+
+y_11 <- rdirichlet(n=1000,alpha=c(0.3,0.6,0.9))
+obj11 <- DR_data(y_11)
+colnames(obj11) <- c('x1','x2','x3')
+
+y_12 <- rdirichlet(n=1000,alpha=c(0.8,1.6,2.4))
+obj12 <- DR_data(y_12)
+colnames(obj12) <- c('x1','x2','x3')
+
+
+oldpar <- par(oma=c(0,0,2,0), mar=c(3,3,3,1), mfrow=c(2,3))
+plot(obj7,main=TeX(r'($\alpha=\left[1,1,1  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj8,main=TeX(r'($\alpha=\left[3,3,3  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj9,main=TeX(r'($\alpha=\left[10,10,10  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+
+plot(obj10,main=TeX(r'($\alpha=\left[0.1,0.1,0.1  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj11,main=TeX(r'($\alpha=\left[0.2,0.2,0.2  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+plot(obj12,main=TeX(r'($\alpha=\left[0.6,0.6,0.6  \right]$)',bold=TRUE),key.pos = NULL, reset = FALSE)
+
+mtext(TeX(r'(3D Non-Symmetric Dirichlet simulations on the 2D simplex for various $\textbf{\alpha}$ vectors)'), outer=TRUE, cex=1.1)
+par(oldpar)
+
+
+#Entropy calculations
+scale_factor <- function(alpha){
+  alpha_0 <- sum(alpha)
+  gamma_0 <- gamma(alpha_0)
+  gamma_is <- gamma(alpha)
+  prod_gam <- prod(gamma_is)
+  final <- prod_gam/gamma_0
+  return(final)
+}
+
+dir_entropy <- function(alpha){
+  first <- log(scale_factor(alpha))
+  m <- length(alpha)
+  middle <- (sum(alpha)-m)*digamma(sum(alpha))
+  last <- sum((alpha-1)*digamma(alpha))
+  final <- first+middle-last
+  return(final)
+}
+
+#All alpha vectors for the symmetric Dirichlet distributions
+alpha_vals <- rbind(c(0.1,0.1,0.1),c(0.3,0.3,0.3),c(0.8,0.8,0.8),c(1,1,1),c(3,3,3),c(8,8,8))
+entropy_vals <- c()
+x <- c()
+
+#Calculate differential entropy value (in nats) for the various symmetric Dirichlet distributions
+for(i in 1:nrow(alpha_vals)){
+  entropy_vals <- c(entropy_vals,dir_entropy(alpha_vals[i,]))
+  #Single scalar parameter value for each of the symmetric distributions
+  x <- c(x,alpha_vals[i])
+}
+
+
+ent_graph1 <- ggplot(data=NULL,mapping=aes(x=x,y=entropy_vals),color=entropy_vals)+geom_point(aes(color=x),size=4)+geom_line(aes(color=x))+ggtitle(TeX(r'(A depiction of differential entropy for the symmetric Dirichlet distributions against the corresponding $\alpha$ parameter)'))+xlab(TeX(r'($\alpha$ parameter)'))+ylab(TeX(r'(Differential Entropy)'))+theme_bw()+theme(legend.position="none")
+
+#All alpha vectors for the non-symmetric Dirichlet distributions
+alpha_vals <- rbind(c(0.1,0.2,0.3),c(0.3,0.6,0.9),c(0.8,1.6,2.4),c(1,2,3),c(3,6,9),c(8,16,24))
+entropy_vals <- c()
+x <- c()
+alpha_0_vals <- apply(alpha_vals,1,sum)
+
+#Calculate differential entropy value (in nats) for the various non-symmetric Dirichlet distributions
+for(i in 1:nrow(alpha_vals)){
+  entropy_vals <- c(entropy_vals,dir_entropy(alpha_vals[i,]))
+  #Sum of the parameter vector for each of the non-symmetric distributions
+  x <- c(x,alpha_0_vals[i])
+}
+       
+ent_graph2 <- ggplot(data=NULL,mapping=aes(x=x,y=entropy_vals),color=entropy_vals)+geom_point(aes(color=x),size=4)+geom_line(aes(color=x))+ggtitle(TeX(r'(A depiction of differential entropy for the non-symmetric Dirichlet distributions against $\alpha_0$)'))+xlab(TeX(r'($\alpha_0$ value)'))+ylab(TeX(r'(Differential Entropy)'))+theme_bw()+theme(legend.position="none")
+
+```
+
+## Code for plotting the hypothetical efficient frontier in chapter 3
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE,results='hide',tidy=TRUE,tidy.opts=list(width.cutoff=80)}
+size <- 5
+return <- c(0.1,0.4,0.3,0.6,0.9)
+cov_mat <- rbind(c(1.2,0.2,0.3,0.1,0.1),c(0.2,1.4,0.1,0.1,0.3),c(0.3,0.1,0.7,0.5,0.2),c(0.1,0.1,0.5,0.8,0.2),c(0.1,0.3,0.2,0.2,0.6))
+
+wmax <- 1 
+wmin <- 0
+
+
+pl_1 <- mvFrontier(return, cov_mat, wmin = wmin, wmax = wmax, n = 2000)
+plt <- ggplot(data=NULL,mapping=aes(x=pl_1$volatility,y=pl_1$return))+geom_point(color='skyblue',size=2)+geom_line(color='skyblue')+theme_bw()+theme(legend.position="none")+xlab(TeX(r'(Portfolio Risk $sigma_p^2$)'))+ylab(TeX(r'(Portfolio Expected Return $\bar{r_p}$)'))+theme(axis.ticks.x = element_blank(), axis.text.x = element_blank())+theme(axis.ticks.y = element_blank(), axis.text.y = element_blank())
+plt
+```
+
+## Code in respect of the Markowitz optimization example in chapter 3
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE,results='hide',tidy=TRUE,tidy.opts=list(width.cutoff=80)}
+options("getSymbols.warning4.0"=FALSE)
+options("getSymbols.yahoo.warning"=FALSE)
+
+
+#Get price data from Yahoo finance using tidyquant package for each of the 10 stocks
+getSymbols(c("FSR.JO","NPN.JO","AMS.JO","SBK.JO","SOL.JO","VOD.JO","SHP.JO","SLM.JO","ABG.JO","MTN.JO"), from = '2021-02-01',
+           to = "2022-04-01",periodicity = 'daily',warnings = FALSE,
+           auto.assign = TRUE)
+
+#Number of stocks
+m <- 10
+
+#Extract just the adjusted closing price data for each security
+
+FRL <- FSR.JO$FSR.JO.Adjusted
+NL <- NPN.JO$NPN.JO.Adjusted
+AAPL <- AMS.JO$AMS.JO.Adjusted
+SBG <- SBK.JO$SBK.JO.Adjusted
+SL <- SOL.JO$SOL.JO.Adjusted
+VGL <- VOD.JO$VOD.JO.Adjusted
+SHL <- SHP.JO$SHP.JO.Adjusted
+SAL <- SLM.JO$SLM.JO.Adjusted
+AGL <- ABG.JO$ABG.JO.Adjusted
+MGL <- MTN.JO$MTN.JO.Adjusted
+
+#Collect data into a singular data frame
+adj_pr <- cbind(FRL,NL,AAPL,SBG,SL,VGL,SHL,SAL,AGL,MGL)
+
+#Compute the rates of return
+adj_ret <- adj_pr/lag(adj_pr)-1
+
+#Expected rate of return
+mu <- apply(adj_ret,2,mean,na.rm=TRUE)
+
+#Covariance matrix of the rates of return
+sigma <- cov(adj_ret[-1,])
+one <- rep(1,m)
+
+#In respect of equation (1.1)
+a <- t(mu)%*%solve(sigma)%*%mu
+b <- t(one)%*%solve(sigma)%*%one
+c <- t(one)%*%solve(sigma)%*%mu
+
+#Our predefined fixed levels of return
+given_ret <- c(0.002,0.003,0.004)
+
+#Officially implementing equation (1.1)--viz. the Markowitz model for each of the 3 levels of return (short-sales allowed here)
+
+omega <- matrix(nrow=3,ncol=m)
+
+#Each row of the omega matrix will be for the corresponding fixed level of return
+for(i in 1:length(given_ret)){
+  lamb_1 <- (c-b*given_ret[i])/((c**2)-a*b)
+  lamb_2 <- (c*given_ret[i]-a)/((c**2)-a*b)
+  
+  omega[i,] <- lamb_1[1,1]*(solve(sigma)%*%mu)+lamb_2[1,1]*(solve(sigma)%*%one)
+}
+omega  
+
+
+#Implementation of the Markowitz model assuming short-selling isn't allowed
+omega_prime <- matrix(nrow=length(given_ret),ncol=m)
+for(i in 1:length(given_ret)){
+  
+  omega_prime[i,] <- portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=given_ret[i],shorts=FALSE)$pw
+}
+
+portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=given_ret[2],shorts=TRUE)$pw
+
+#Portfolio Statistics for all portfolios computed in (a)
+vars <- c()
+var_primes <- c()
+means <- c()
+mean_primes <- c()
+
+for(i in 1:length(given_ret)){
+  vars <- c(vars,t(omega[i,])%*%sigma%*%omega[i,])
+  var_primes <- c(var_primes,t(omega_prime[i,])%*%sigma%*%omega_prime[i,])
+  
+  means <- c(means,t(mu)%*%omega[i,])
+  mean_primes <- c(mean_primes,t(mu)%*%omega_prime[i,])
+}
+
+
+var_1 <- t(omega[1,])%*%sigma%*%omega[1,]
+
+#Construction of the efficient frontier using the fportfolio package
+wmax <- 1 
+wmin <- 0
+pl_1 <- mvFrontier(mu, sigma, wmin = 0, wmax = 1, n = 2000)
+e_frontier <- ggplot(data=NULL,mapping=aes(x=pl_1$volatility,y=pl_1$return))+geom_point(color='blue',size=2)+geom_line(color='blue')+theme_bw()+theme(legend.position="none")+xlab(TeX(r'(Portfolio Risk $sigma_p^2$)'))+ylab(TeX(r'(Portfolio Expected Return $\bar{r_p}$)'))
+
+obj <- portfolioFrontier(data=as.timeSeries(sigma),constraints = "LongOnly")
+plot(obj,c(1,2,5),type='b-')
+
+mu
+portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=0.00422,shorts=FALSE)$pw
+
+yes_1 <- omega2
+yes_mark <- optim_mark
+```
+
+## Code in respect of the application chapter
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE,results='hide',tidy=TRUE,tidy.opts=list(width.cutoff=80)}
+
+
+options("getSymbols.warning4.0"=FALSE)
+options("getSymbols.yahoo.warning"=FALSE)
+
+#Number of stocks
+n <- 20
+
+#Set seed
+set.seed(100)
+
+#Get price data from Yahoo finance using tidyquant package for each of the 20 stocks
+getSymbols(c("ABG.JO","FSR.JO","NED.JO","SLM.JO","DSY.JO","MTN.JO","VOD.JO","MRP.JO","TFG.JO","PIK.JO",
+             "SPP.JO","SHP.JO","SOL.JO","GFI.JO","ARI.JO","NPN.JO","BVT.JO","BAW.JO","APN.JO","NTC.JO"), from = '2008-01-01',
+           to = "2019-01-01",periodicity = 'weekly',warnings = FALSE,
+           auto.assign = TRUE)
+
+
+
+#Extract just the adjusted closing price data for each security
+AGL <- ABG.JO$ABG.JO.Adjusted
+FL <- FSR.JO$FSR.JO.Adjusted
+NGL <- NED.JO$NED.JO.Adjusted
+SAL <- SLM.JO$SLM.JO.Adjusted
+DL <- DSY.JO$DSY.JO.Adjusted
+MGL <- MTN.JO$MTN.JO.Adjusted
+VGL <- VOD.JO$VOD.JO.Adjusted
+MPG <- MRP.JO$MRP.JO.Adjusted
+TFG <- TFG.JO$TFG.JO.Adjusted
+PPSL <- PIK.JO$PIK.JO.Adjusted
+SGL <- SPP.JO$SPP.JO.Adjusted
+SHL <- SHP.JO$SHP.JO.Adjusted
+SL <- SOL.JO$SOL.JO.Adjusted
+GFL <- GFI.JO$GFI.JO.Adjusted
+ARM <- ARI.JO$ARI.JO.Adjusted
+NL <- NPN.JO$NPN.JO.Adjusted
+BVG <- BVT.JO$BVT.JO.Adjusted
+BW <- BAW.JO$BAW.JO.Adjusted
+APL <- APN.JO$APN.JO.Adjusted
+NEL <- NTC.JO$NTC.JO.Adjusted
+
+#Collect data into a singular data frame
+adj_pr <- cbind(AGL,FL,NGL,SAL,DL,MGL,VGL,MPG,TFG,PPSL,SGL,SHL,SL,GFL,ARM,NL,BVG,BW,APL,NEL)
+
+#Compute the rates of return
+adj_ret <- adj_pr/(stats::lag(adj_pr))-1
+adj_ret[-1,11] <- adj_ret[-1,11]/2
+
+#Expected rate of return
+mu <- apply(adj_ret,2,mean,na.rm=TRUE)
+
+#Covariance matrix of the rates of return
+sigma <- cov(adj_ret[-1,])
+
+#Theta vectors (prior knowledge)
+theta_1 <- rep(1/n,n)
+theta_2 <- c(rep(1/40,5),rep(1/20,7),rep(1/10,3),5/40,rep(1/40,4))
+
+#Simulating 500000 portfolios from a Dirichlet distribution for theta_1
+#Set seed
+set.seed(100)
+y1 <- rdirichlet(n=800000,alpha=rep(1,20))
+
+#Simulating 500000 portfolios from a Dirichlet distribution for theta_2
+#Set seed
+set.seed(100)
+y2 <- rdirichlet(n=800000,alpha=c(1,1,1,1,1,2,2,2,2,2,2,2,4,4,4,5,1,1,1,1))
+
+#Set chosen constant values
+c <- 1
+mu0 <- 0.004
+sigma0 <- 0.000675
+
+#Function to compute the Kullback-Leibler divergence from each Dirichlet vector to theta_i
+KL <- function(p,theta){
+  l <- min(length(p),length(theta))
+  sum <- 0
+  for(i in 1:l){
+    sum <- sum+p[i]*log(p[i]/theta[i])
+  }
+  return(sum)
+}
+
+#Compute the Kullback-Leibler divergence for each simulated vector in y_i to theta_1
+KL_entropies1 <- -y1%*%log(theta_1)+rowSums(y1*log(y1))
+KL_entropies2 <- -y2%*%log(theta_2)+rowSums(y2*log(y2))
+
+#Get indices of all Kullback-Leibler Divergence values larger than c
+indices1 <- which(KL_entropies1 >= c)
+indices2 <- which(KL_entropies2 >= c)
+
+#For consistency in the values removed, merge the two index vectors... and also remove them the corresponding 
+#KL-entropies from their repective vectors
+indices <- c(indices1,indices2)
+KL_entropies_1 <- KL_entropies1[-indices]
+KL_entropies_2 <- KL_entropies2[-indices]
+
+#Now remove from the rows with position number dictated by the indices vector, from both y1 and y2
+x1 <- y1[-indices,]
+x2 <- y2[-indices,]
+
+#Function to compute the portfolio statistics (i.e. mean and variances). Returns a dataframe with 2 columns
+port_stats <- function(y,mu,sigma){
+  means <- as.vector(y%*%mu)
+  temp <- y%*%sigma
+  vars <- rowSums(temp*y)
+  return(as.data.frame(cbind(means,vars)))
+}
+
+#Means and variances for all portfolios stored in the rows of x1 and x2 respectively
+x1_stats <- port_stats(x1,mu,sigma)
+x2_stats <- port_stats(x2,mu,sigma)
+
+#Filter the dataframes of statistics s.t. mu>=mu0 and sigma>sigma0
+filter_x1 <- x1_stats[(x1_stats$means>=mu0 & x1_stats$vars<=sigma0),]
+filter_x2 <- x2_stats[(x2_stats$means>=mu0 & x2_stats$vars<=sigma0),]
+
+#Get the indices of all rows in x1_stats and x2_stats that satisfy the requirements used to yield filter_x1 and filter_x2 respectively
+indices_x1 <- as.numeric(row.names(filter_x1))
+indices_x2 <- as.numeric(row.names(filter_x2))
+
+#Extract the index of the maximum KL divergence value
+min_index_1 <- which.min(KL_entropies_1[indices_x1])
+min_index_2 <- which.min(KL_entropies_2[indices_x2])
+
+#Get the corresponding rows in x1 and x2, and its portfolio statistics
+omega1 <- x1[indices_x1[min_index_1],]
+omega2 <- x2[indices_x2[min_index_2],]
+mean_var_omega1*52 <- c(t(omega1)%*%mu,t(omega1)%*%sigma%*%omega1)
+mean_var_omega2 <- c(t(omega2)%*%mu,t(omega2)%*%sigma%*%omega2)
+
+#Kullback-Leibler Divergence values with reference vectors theta_1 and theta_2 using proposed algorithm
+ent_1 <- KL(omega1,theta_1)
+ent_2 <- KL(omega2,theta_2)
+
+#Shannon entropies of omega_theta1 and omega_theta2
+S_ent1 <- -t(omega1)%*%log(omega1)
+S_ent2 <- -t(omega2)%*%log(omega2)
+
+#Annualized ex-post Sharpe ratios of omega_theta1 and omega_theta2 (ignoring Rf)
+sharpe1 <- sqrt(52)*(mean_var_omega1[1]/sqrt(mean_var_omega1[2]))
+sharpe2 <- sqrt(52)*(mean_var_omega2[1]/sqrt(mean_var_omega2[2]))
+
+
+#Next, we employ a numerica solver from R's nloptr package to solve (4.4) with starting values theta_1 and theta_2
+
+#The objective function that we'd like to minimize. In this case, it is the Kullback-Leibler Divergence (theta_1)
+obj1 <- function(z){
+  hold <- KL(z,theta_1)
+  return(hold)
+}
+
+#The second objective function that we'd like to minimize. In this case, it is the Kullback-Leibler Divergence (theta_2)
+obj2 <- function(z){
+  hold <- KL(z,theta_2)
+  return(hold)
+}
+
+#Inequality constraints (written in the form required by the nloptr package). 
+#Equality constraint gets ignored, so we'll renormalize result at the end to ensure weights sum to 1
+ineq <- function(z){
+  const <- c(t(z)%*%sigma%*%z-sigma0,mu0-t(z)%*%mu)
+  
+  return(const)
+}
+
+#Lower and upper bounds for each resulting weight
+lb <- rep(0,n)
+ub <- rep(1,n)
+
+#Implementation of algorithm for first objective function
+res_1 <- nloptr(x0=theta_1,
+                eval_f=obj1,
+                lb = lb,
+                ub = ub,
+                eval_g_ineq = ineq,
+                opts = list("algorithm"="NLOPT_LN_COBYLA",
+                            "xtol_rel"=1.0e-10))[["solution"]]
+
+#Implementation of algorithm for second objective function
+res_2 <- nloptr(x0 = theta_2,
+                 eval_f = obj2,
+                 lb = lb,
+                 ub=ub,
+                 eval_g_ineq = ineq,
+                 opts = list("algorithm"="NLOPT_LN_COBYLA",
+                             "xtol_rel"=1.0e-10))[["solution"]]
+
+
+#Normalize weights to ensure that they sum to 1
+omega_prime1 <- res_1/sum(res_1)
+omega_prime2 <- res_2/sum(res_2)
+
+#Portfolio statistics
+mean_var_omega_prime1 <- c(t(omega_prime1)%*%mu,t(omega_prime1)%*%sigma%*%omega_prime1)
+mean_var_omega_prime2 <- c(t(omega_prime2)%*%mu,t(omega_prime2)%*%sigma%*%omega_prime2)
+
+#Kullback-Leibler Divergence values with reference vectors theta_1 and theta_2 using numerical algorithm
+ent_prime1 <- KL(omega_prime1,theta_1)
+ent_prime2 <- KL(omega_prime2,theta_2)
+
+#Markowitz Portfolio
+optim_mark <- portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=mu0,shorts=FALSE)$pw
+mean_var_optim_mark <- c(t(optim_mark)%*%mu,t(optim_mark)%*%sigma%*%optim_mark)
+
+#Shannon Entropy of Markowitz portfolio
+ent_mark <- -t(optim_mark[optim_mark>0])%*%log(optim_mark[optim_mark>0])
+Sharpe_mark <- sqrt(52)*(mean_var_optim_mark[1]/sqrt(mean_var_optim_mark[2]))
+
+#Plot the time series of returns generated over ensuing 20 weeks for the 3 portfolios
+#Get price data from Yahoo finance using tidyquant package for each of the 20 stocks
+getSymbols(c("ABG.JO","FSR.JO","NED.JO","SLM.JO","DSY.JO","MTN.JO","VOD.JO","MRP.JO","TFG.JO","PIK.JO",
+             "SPP.JO","SHP.JO","SOL.JO","GFI.JO","ARI.JO","NPN.JO","BVT.JO","BAW.JO","APN.JO","NTC.JO"), from = '2019-01-02',
+           to = "2019-07-02",periodicity = 'weekly',warnings = FALSE,
+           auto.assign = TRUE)
+
+
+#Extract just the adjusted closing price data for each security
+AGL_fut <- ABG.JO$ABG.JO.Adjusted
+FL_fut <- FSR.JO$FSR.JO.Adjusted
+NGL_fut <- NED.JO$NED.JO.Adjusted
+SAL_fut <- SLM.JO$SLM.JO.Adjusted
+DL_fut <- DSY.JO$DSY.JO.Adjusted
+MGL_fut <- MTN.JO$MTN.JO.Adjusted
+VGL_fut <- VOD.JO$VOD.JO.Adjusted
+MPG_fut <- MRP.JO$MRP.JO.Adjusted
+TFG_fut <- TFG.JO$TFG.JO.Adjusted
+PPSL_fut <- PIK.JO$PIK.JO.Adjusted
+SGL_fut <- SPP.JO$SPP.JO.Adjusted
+SHL_fut <- SHP.JO$SHP.JO.Adjusted
+SL_fut <- SOL.JO$SOL.JO.Adjusted
+GFL_fut <- GFI.JO$GFI.JO.Adjusted
+ARM_fut <- ARI.JO$ARI.JO.Adjusted
+NL_fut <- NPN.JO$NPN.JO.Adjusted
+BVG_fut <- BVT.JO$BVT.JO.Adjusted
+BW_fut <- BAW.JO$BAW.JO.Adjusted
+APL_fut <- APN.JO$APN.JO.Adjusted
+NEL_fut <- NTC.JO$NTC.JO.Adjusted
+
+#Collect future data into a singular data frame
+adj_pr_fut <- cbind(AGL_fut,FL_fut,NGL_fut,SAL_fut,DL_fut,MGL_fut,VGL_fut,MPG_fut,TFG_fut,PPSL_fut,SGL_fut,SHL_fut,SL_fut,GFL_fut,ARM_fut,NL_fut,BVG_fut,BW_fut,APL_fut,NEL_fut)
+
+#Compute the future rates of return
+adj_ret_fut <- (adj_pr_fut/stats::lag(adj_pr_fut)-1)[-1,]
+
+#Returns over the next 15 weeks
+returns_15 <- as.data.frame(cbind((adj_ret_fut%*%omega1),(adj_ret_fut%*%omega2),(adj_ret_fut%*%optim_mark),time(adj_ret_fut)))
+colnames(returns_15) <- c("Omega1_Returns", "Omega2_Returns", "Markowitz_Returns","Date")
+returns_15$Date <- seq.Date(from = as.Date("2019-01-08"), 
+                            to = as.Date("2019-07-02"), by = 7)
+
+
+returns_melt <- returns_15 %>% gather(Portfolio, Return, -Date)
+returns_melt$Date <- seq.Date(from = as.Date("2019-01-08"), 
+                              to = as.Date("2019-07-02"), by = 7)
+
+plot_ret <- ggplot(returns_melt,aes(x=Date,y=Return))+geom_line(aes(color=Portfolio))+geom_point(aes(color=Portfolio))+
+    theme_bw()+scale_color_discrete(labels=unname(TeX(c("Markowitz returns","$\\Omega_{\\underline{\\theta_1}}^*$ returns","$\\Omega_{\\underline{\\theta_2}}^*$ returns"))))+
+  scale_x_date(date_breaks = "1 week",
+               date_labels ="%d-%B")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+xlab("Week")+ylab("Rate of return")+
+  geom_hline(yintercept=0,color="brown",linetype="dashed")
+
+
+#Return generated at the end of 6 months for each portfolio (as percentages)
+omega1_end_ret <- (prod(1+returns_15$Omega1_Returns)-1)*100
+omega2_end_ret <- (prod(1+returns_15$Omega2_Returns)-1)*100
+mark_end_ret <- (prod(1+returns_15$Markowitz_Returns)-1)*100
+
+options("getSymbols.warning4.0"=FALSE)
+options("getSymbols.yahoo.warning"=FALSE)
+
+#Number of stocks
+n <- 20
+
+#Set seed
+set.seed(100)
+
+#Get price data from Yahoo finance using tidyquant package for each of the 20 stocks
+getSymbols(c("ABG.JO","FSR.JO","NED.JO","SLM.JO","DSY.JO","MTN.JO","VOD.JO","MRP.JO","TFG.JO","PIK.JO",
+             "SPP.JO","SHP.JO","SOL.JO","GFI.JO","ARI.JO","NPN.JO","BVT.JO","BAW.JO","APN.JO","NTC.JO"), from = '2008-01-01',
+           to = "2019-01-01",periodicity = 'weekly',warnings = FALSE,
+           auto.assign = TRUE)
+
+
+
+#Extract just the adjusted closing price data for each security
+AGL <- ABG.JO$ABG.JO.Adjusted
+FL <- FSR.JO$FSR.JO.Adjusted
+NGL <- NED.JO$NED.JO.Adjusted
+SAL <- SLM.JO$SLM.JO.Adjusted
+DL <- DSY.JO$DSY.JO.Adjusted
+MGL <- MTN.JO$MTN.JO.Adjusted
+VGL <- VOD.JO$VOD.JO.Adjusted
+MPG <- MRP.JO$MRP.JO.Adjusted
+TFG <- TFG.JO$TFG.JO.Adjusted
+PPSL <- PIK.JO$PIK.JO.Adjusted
+SGL <- SPP.JO$SPP.JO.Adjusted
+SHL <- SHP.JO$SHP.JO.Adjusted
+SL <- SOL.JO$SOL.JO.Adjusted
+GFL <- GFI.JO$GFI.JO.Adjusted
+ARM <- ARI.JO$ARI.JO.Adjusted
+NL <- NPN.JO$NPN.JO.Adjusted
+BVG <- BVT.JO$BVT.JO.Adjusted
+BW <- BAW.JO$BAW.JO.Adjusted
+APL <- APN.JO$APN.JO.Adjusted
+NEL <- NTC.JO$NTC.JO.Adjusted
+
+#Collect data into a singular data frame
+adj_pr <- cbind(AGL,FL,NGL,SAL,DL,MGL,VGL,MPG,TFG,PPSL,SGL,SHL,SL,GFL,ARM,NL,BVG,BW,APL,NEL)
+
+#Compute the rates of return
+adj_ret <- adj_pr/(stats::lag(adj_pr))-1
+
+#Expected rate of return
+mu <- apply(adj_ret,2,mean,na.rm=TRUE)
+
+#Covariance matrix of the rates of return
+sigma <- cov(adj_ret[-1,])
+
+#Theta vectors (prior knowledge)
+theta_1 <- rep(1/n,n)
+theta_2 <- c(rep(1/40,5),rep(1/20,7),rep(1/10,3),5/40,rep(1/40,4))
+
+#Simulating 500000 portfolios from a Dirichlet distribution for theta_1
+set.seed(100)
+y1 <- rdirichlet(n=800000,alpha=rep(0.5,20))
+
+#Simulating 500000 portfolios from a Dirichlet distribution for theta_2
+set.seed(100)
+y2 <- rdirichlet(n=800000,alpha=c(0.5,0.5,0.5,0.5,0.5,1,1,1,1,1,1,1,1,1,1,5/2,0.5,0.5,0.5,0.5))
+
+#Set chosen constant values
+num_port <- 5000
+c <- 1.3
+mu0 <- seq(from=0.002,to=0.005,length.out=5000)
+shan_mark <- c()
+sigma0 <- c()
+for(i in 1:num_port){
+  s <- portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=mu0[i],shorts=FALSE)$pw
+  shan_mark <- c(shan_mark,-t(s[s>0])%*%log(s[s>0]))
+  sigma0 <- c(sigma0,t(s)%*%sigma%*%s)
+}
+mean_var_mark <- as.data.frame(cbind(mu0,sigma0,shan_mark))
+
+#Compute the Kullback-Leibler divergence for each simulated vector in y_i to theta_1
+KL_entropies1 <- -y1%*%log(theta_1)+rowSums(y1*log(y1))
+KL_entropies2 <- -y2%*%log(theta_2)+rowSums(y2*log(y2))
+
+#Get indices of all Kullback-Leibler Divergence values larger than c
+indices1 <- which(KL_entropies1 >= c)
+indices2 <- which(KL_entropies2 >= c)
+
+#For consistency in the values removed, merge the two index vectors... and also remove them the corresponding 
+#KL-entropies from their repective vectors
+indices <- c(indices1,indices2)
+KL_entropies_1 <- round(KL_entropies1[-indices],4)
+KL_entropies_2 <- round(KL_entropies2[-indices],4)
+
+#Now remove from the rows with position number dictated by the indices vector, from both y1 and y2
+x1 <- y1[-indices,]
+x2 <- y2[-indices,]
+
+#Function to compute the portfolio statistics (i.e. mean and variances). Returns a dataframe with 2 columns
+port_stats <- function(y,mu,sigma){
+  means <- as.vector(y%*%mu)
+  temp <- y%*%sigma
+  vars <- rowSums(temp*y)
+  return(as.data.frame(cbind(means,vars)))
+}
+
+#Means and variances for all portfolios stored in the rows of x1 and x2 respectively
+x1_stats <- port_stats(x1,mu,sigma)
+x2_stats <- port_stats(x2,mu,sigma)
+
+x1_stats <- cbind(x1_stats,KL_entropies_1)
+x2_stats <- cbind(x2_stats,KL_entropies_2)
+
+d <- seq(1.1,1.45,length.out=5000)
+sigma1 <- sort(sigma0)
+mean_var_omega1 <- c()
+mean_var_omega2 <- c()
+current1 <- c()
+current2 <- c()
+
+#Takes very long...roughly 20 minutes to run.
+for(i in 1:num_port){
+  #Filter the dataframes of statistics s.t. mu>=mu0 and sigma>sigma0*d[i]
+  filter_x1 <- x1_stats[(x1_stats$means>=mu0[i] & x1_stats$vars<=sigma1[i]*d[i]),]
+  filter_x2 <- x2_stats[(x2_stats$means>=mu0[i] & x2_stats$vars<=sigma1[i]*d[i]),]
+  
+  fil_x1 <- filter_x1[!(filter_x1$KL_entropies_1 %in% current1),]
+  fil_x2 <- filter_x2[!(filter_x2$KL_entropies_2 %in% current2),]
+  
+  #Get the indices of all rows in x1_stats and x2_stats that satisfy the requirements used to yield filter_x1 and filter_x2 respectively
+  indices_x1 <- as.numeric(row.names(fil_x1))
+  indices_x2 <- as.numeric(row.names(fil_x2))
+  
+  
+  #Extract the index of the maximum KL divergence value
+  min_index_1 <- which.min(fil_x1$KL_entropies_1)
+  min_index_2 <- which.min(fil_x2$KL_entropies_2)
+  
+  
+  #Get the corresponding rows in x1 and x2, and its portfolio statistics
+  mean_var_omega1 <- rbind(mean_var_omega1,x1_stats[indices_x1[min_index_1],])
+  mean_var_omega2 <- rbind(mean_var_omega2,x2_stats[indices_x2[min_index_2],])
+  
+  current1 <- c(current1,fil_x1$KL_entropies_1[min_index_1])
+  current2 <- c(current2,fil_x2$KL_entropies_2[min_index_2])
+}
+
+#Convert KL-divergences in 3rd columns to Shannon entropies using the established relationship
+#NB: DON'T RUN MORE THAN ONCE!
+mean_var_omega1$sh_entropies_1 <- -mean_var_omega1$KL_entropies_1+log(n)
+mean_var_omega2$sh_entropies_2 <- -rowSums(x2[as.numeric(rownames(mean_var_omega2)),]*log(x2[as.numeric(rownames(mean_var_omega2)),]))
+
+
+#Tidying up dataframes (i.e. melting the data) for plotting
+mean_var_omega1$KL_entropies_1 <- NULL
+mean_var_omega2$KL_entropies_2 <- NULL
+
+
+mean_var_omega1$Type <- rep("#8B7355",nrow(mean_var_omega1))
+mean_var_omega2$Type <- rep("#8B3E2F",nrow(mean_var_omega2))
+mean_var_mark$Type <- rep("Markowitz",nrow(mean_var_mark))
+
+colnames(mean_var_omega1) <- c("means","vars","sh_entropies","Type")
+colnames(mean_var_mark) <- c("means","vars","sh_entropies","Type")
+colnames(mean_var_omega2) <- c("means","vars","sh_entropies","Type")
+
+complete_1 <- as.data.frame(rbind(mean_var_mark,mean_var_omega1))
+complete_2 <- as.data.frame(rbind(mean_var_mark,mean_var_omega2))
+
+#Contour plots of the portfolios with prior weight theta_1 and theta_2 against Markowitz' optimal portfolios
+plot_c1_omega1 <- ggplot(complete_1,aes(x=sqrt(vars),y=means))+geom_point(aes(color=Type))+theme_bw()+labs(x="Standard Deviation",y="Expected Returns")+scale_color_manual(values=c("coral4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_1$} prior)'), 'Markowitz'))
+plot_c2_omega1 <- ggplot(complete_1,aes(x=sqrt(vars),y=sh_entropies))+geom_point(aes(color=Type))+theme_bw()+labs(x="Standard Deviation",y="Shannon Entropy")+scale_color_manual(values=c("coral4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_1$} prior)'), 'Markowitz'))
+plot_c3_omega1 <- ggplot(complete_1,aes(x=sh_entropies,y=means))+geom_point(aes(color=Type))+theme_bw()+labs(x="Shannon Entropy",y="Expected Returns")+scale_color_manual(values=c("coral4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_1$} prior)'), 'Markowitz'))
+
+plot_c1_omega2 <- ggplot(complete_2,aes(x=sqrt(vars),y=means))+geom_point(aes(color=Type))+theme_bw()+labs(x="Standard Deviation",y="Expected Returns")+scale_color_manual(values=c("burlywood4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_2$} prior)'), 'Markowitz'))
+plot_c2_omega2 <- ggplot(complete_2,aes(x=sqrt(vars),y=sh_entropies))+geom_point(aes(color=Type))+theme_bw()+labs(x="Standard Deviation",y="Shannon Entropy")+scale_color_manual(values=c("burlywood4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_2$} prior)'), 'Markowitz'))
+plot_c3_omega2 <- ggplot(complete_2,aes(x=sh_entropies,y=means))+geom_point(aes(color=Type))+theme_bw()+labs(x="Shannon Entropy",y="Expected Returns")+scale_color_manual(values=c("burlywood4","cadetblue3"),labels=c(TeX(r'(\underline{$\theta_2$} prior)'), 'Markowitz'))
+
+#Fit all plots in a 2x3 grid
+grid.arrange(plot_c1_omega1,plot_c2_omega1,plot_c3_omega1,plot_c1_omega2,plot_c2_omega2,plot_c3_omega2,ncol=3)
+
+#Correlations between shannon entropies and standard deviations
+cor_theta1 <- cor(mean_var_omega1$sh_entropies,sqrt(mean_var_omega1$vars))
+cor_theta2 <- cor(mean_var_omega2$sh_entropies,sqrt(mean_var_omega2$vars))
+cor_mark <- cor(mean_var_mark$sh_entropies,sqrt(mean_var_mark$vars))
+
+#Plot the time series of returns generated over ensuing 20 weeks for the 3 portfolios
+#Get price data from Yahoo finance using tidyquant package for each of the 20 stocks
+getSymbols(c("ABG.JO","FSR.JO","NED.JO","SLM.JO","DSY.JO","MTN.JO","VOD.JO","MRP.JO","TFG.JO","PIK.JO",
+             "SPP.JO","SHP.JO","SOL.JO","GFI.JO","ARI.JO","NPN.JO","BVT.JO","BAW.JO","APN.JO","NTC.JO"), from = '2019-01-02',
+           to = "2019-07-02",periodicity = 'weekly',warnings = FALSE,
+           auto.assign = TRUE)
+
+
+
+#Extract just the adjusted closing price data for each security
+AGL_fut <- ABG.JO$ABG.JO.Adjusted
+FL_fut <- FSR.JO$FSR.JO.Adjusted
+NGL_fut <- NED.JO$NED.JO.Adjusted
+SAL_fut <- SLM.JO$SLM.JO.Adjusted
+DL_fut <- DSY.JO$DSY.JO.Adjusted
+MGL_fut <- MTN.JO$MTN.JO.Adjusted
+VGL_fut <- VOD.JO$VOD.JO.Adjusted
+MPG_fut <- MRP.JO$MRP.JO.Adjusted
+TFG_fut <- TFG.JO$TFG.JO.Adjusted
+PPSL_fut <- PIK.JO$PIK.JO.Adjusted
+SGL_fut <- SPP.JO$SPP.JO.Adjusted
+SHL_fut <- SHP.JO$SHP.JO.Adjusted
+SL_fut <- SOL.JO$SOL.JO.Adjusted
+GFL_fut <- GFI.JO$GFI.JO.Adjusted
+ARM_fut <- ARI.JO$ARI.JO.Adjusted
+NL_fut <- NPN.JO$NPN.JO.Adjusted
+BVG_fut <- BVT.JO$BVT.JO.Adjusted
+BW_fut <- BAW.JO$BAW.JO.Adjusted
+APL_fut <- APN.JO$APN.JO.Adjusted
+NEL_fut <- NTC.JO$NTC.JO.Adjusted
+
+#Collect future data into a singular data frame
+adj_pr_fut <- cbind(AGL_fut,FL_fut,NGL_fut,SAL_fut,DL_fut,MGL_fut,VGL_fut,MPG_fut,TFG_fut,PPSL_fut,SGL_fut,SHL_fut,SL_fut,GFL_fut,ARM_fut,NL_fut,BVG_fut,BW_fut,APL_fut,NEL_fut)
+
+#Compute the future rates of return
+adj_ret_fut <- (adj_pr_fut/stats::lag(adj_pr_fut)-1)[-1,]
+
+#Get the weights of the 5000 portfolios with prior vectors theta_1 and theta_2
+weights_1 <- x1[as.numeric(rownames(mean_var_omega1)),]
+weights_2 <- x2[as.numeric(rownames(mean_var_omega2)),]
+
+#Get the weights of the 5000 Markowitz portfolios
+mu0 <- seq(from=0.002,to=0.005,length.out=5000)
+weights_mark <- c()
+for(i in 1:num_port){
+  s <- portfolio.optim(x=as.matrix(adj_ret[-1,]),pm=mu0[i],shorts=FALSE)$pw
+  weights_mark <- rbind(weights_mark,s)
+}
+
+#Get the weekly future returns of all 5000 markowitz, theta_1 and theta_2 portfolios
+weekly_ret_1 <- weights_1%*%t(adj_ret_fut)
+weekly_ret_2 <- weights_2%*%t(adj_ret_fut)
+weekly_ret_mark <- weights_mark%*%t(adj_ret_fut)
+
+#Get ultimate returns at the end of the 6 month period
+temp1 <- 1+weekly_ret_1
+temp2 <- 1+weekly_ret_2
+temp3 <- 1+weekly_ret_mark
+
+temp_theta1 <- 1
+temp_theta2 <- 1
+temp_mark <- 1
+
+for(i in 1:ncol(weekly_ret_1)){
+  temp_theta1 <- temp_theta1*temp1[,i]
+  temp_theta2 <- temp_theta2*temp2[,i]
+  temp_mark <- temp_mark*temp3[,i]
+}
+temp_theta1 <- as.data.frame(temp_theta1-1)
+temp_theta2 <- as.data.frame(temp_theta2-1)
+temp_mark <- as.data.frame(temp_mark-1)
+
+#Density plots of the ultimate obtained returns at the end of the 6 month period for each of the 5000 portfolios
+temp_theta1$Type <- rep("#8B7355",length(temp_theta1))
+temp_theta2$Type <- rep("#8B3E2F",length(temp_theta2))
+temp_mark$Type <- rep("Markowitz",length(temp_mark))
+
+colnames(temp_theta1) <- c("Ultimate_Returns","Type")
+colnames(temp_theta2) <- c("Ultimate_Returns","Type")
+colnames(temp_mark) <- c("Ultimate_Returns","Type")
+
+final1 <- as.data.frame(rbind(temp_mark,temp_theta1))
+final2 <- as.data.frame(rbind(temp_mark,temp_theta2))
+
+d1 <- ggplot(final1, aes(x=Ultimate_Returns, fill=Type)) + geom_density(alpha=.4)+theme_bw()+labs(x="Overall return at the end of 6 months",y="Density")+scale_fill_manual(values=c("bisque4","cyan3"),labels=c(TeX(r'(\underline{$\theta_1$} prior)'), 'Markowitz'))
+d2 <- ggplot(final2, aes(x=Ultimate_Returns, fill=Type)) + geom_density(alpha=.4)+theme_bw()+labs(x="Overall return at the end of 6 months",y="Density")+scale_fill_manual(values=c("darkgoldenrod","cyan3"),labels=c(TeX(r'(\underline{$\theta_2$} prior)'), 'Markowitz'))
+
+grid.arrange(d1,d2,ncol=2)
+
+mean(temp_theta1[,1])
+mean(temp_theta2[,1])
+mean(temp_mark[,1])
+```
+
